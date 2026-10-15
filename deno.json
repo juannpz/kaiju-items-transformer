@@ -1,12 +1,19 @@
 {
     "name": "@juannpz/kaiju-items-transformer-v2",
-    "version": "0.17.0",
+    "version": "0.18.0",
     "license": "MIT",
     "exports": "./mod.ts",
     "imports": {
         "xlsx": "npm:xlsx@^0.18.5"
     },
+    "tasks": {
+        "test": "deno test --allow-net tests/",
+        "check": "deno check mod.ts",
+        "lint": "deno lint",
+        "fmt": "deno fmt"
+    },
     "lint": {
+        "exclude": [".kilo"],
         "rules": {
             "tags": [
                 "recommended"
@@ -14,6 +21,7 @@
         }
     },
     "fmt": {
+        "exclude": [".kilo"],
         "useTabs": false,
         "indentWidth": 4,
         "lineWidth": 100

@@ -3,6 +3,8 @@ export {
     defineSchema,
     DocumentProcessor,
     FormatDetectionError,
+    googleSheetCsvUrl,
+    GoogleSheetsParser,
     LLMError,
     ParseError,
     PdfParseError,

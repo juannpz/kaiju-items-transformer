@@ -26,12 +26,14 @@ export class DocumentProcessor {
     private llmClient: LLMClient;
     private locale: string;
     private timeoutMs: number;
+    private ocr?: (bytes: Uint8Array) => Promise<string>;
 
     constructor(config: ProcessorConfig) {
         this.schema = config.schema;
         this.llmClient = new LLMClient(config.llm);
         this.locale = config.locale ?? "es";
         this.timeoutMs = DEFAULT_LLM_TIMEOUT_MS;
+        this.ocr = config.ocr;
     }
 
     async process<T extends Record<string, unknown> = Record<string, unknown>>(
@@ -41,12 +43,21 @@ export class DocumentProcessor {
 
         const documentBytes = this.resolveDocument(input.document);
 
+        // Para Google Sheets el "documento" puede ser la URL (viene por
+        // `sourceUrl` o `filename`).
+        const sourceUrl = input.sourceUrl ??
+            (looksLikeUrl(input.filename) ? input.filename : undefined);
+
         const resolvedFormat = input.format && input.format !== "auto"
             ? input.format
-            : detectFormat(documentBytes, input.filename);
+            : detectFormat(documentBytes, input.filename ?? input.sourceUrl);
 
-        const parser = getParser(resolvedFormat, documentBytes, input.filename);
-        const rawContent: RawContent = await parser.parse(documentBytes);
+        const parser = getParser(resolvedFormat, documentBytes, input.filename ?? sourceUrl);
+        const rawContent: RawContent = await parser.parse(documentBytes, {
+            headerRow: input.headerRow,
+            url: sourceUrl,
+            extractText: this.ocr,
+        });
 
         if (rawContent.type === "tabular") {
             const data = rawContent.data;
@@ -241,7 +252,7 @@ export class DocumentProcessor {
             }
         }
 
-        const columnMapping = this.buildColumnMapping(llmResult.column_mapping);
+        const columnMapping = this.buildColumnMapping(llmResult);
 
         const extractResult = applyColumnMapping(data, columnMapping, this.schema);
 
@@ -417,8 +428,9 @@ export class DocumentProcessor {
     }
 
     private buildColumnMapping(
-        llmMapping: LLMColumnMappingResponse["column_mapping"],
+        llmResult: LLMColumnMappingResponse,
     ): ColumnMapping {
+        const llmMapping = llmResult.column_mapping;
         const columns: Record<string, ColumnTarget> = {};
 
         for (const [colName, colDef] of Object.entries(llmMapping)) {
@@ -449,9 +461,13 @@ export class DocumentProcessor {
             columns[colName] = { type: "ignore" };
         }
 
+        const headerRow = typeof llmResult.header_row === "number" && llmResult.header_row >= 0
+            ? llmResult.header_row
+            : 0;
+
         return {
             columns,
-            header_row: 0,
+            header_row: headerRow,
         };
     }
 
@@ -620,6 +636,10 @@ export class DocumentProcessor {
 
         return result;
     }
+}
+
+function looksLikeUrl(value?: string): boolean {
+    return !!value && /^https?:\/\//i.test(value.trim());
 }
 
 interface LLMToolCallMissingField {

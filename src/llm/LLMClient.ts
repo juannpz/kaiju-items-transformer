@@ -17,6 +17,16 @@ export class LLMClient {
         };
     }
 
+    /**
+     * DeepSeek acepta `thinking: {type:"disabled"}`; otros proveedores
+     * OpenAI-compatible no. Se inyecta solo para DeepSeek.
+     */
+    private noStreamExtras(): Record<string, unknown> {
+        return this.config.baseUrl.includes("deepseek")
+            ? { thinking: { type: "disabled" as const } }
+            : {};
+    }
+
     extract(
         systemPrompt: string,
         content: string,
@@ -74,7 +84,7 @@ export class LLMClient {
 
         const fetchBody = useStream
             ? { ...baseBody, stream: true, stream_options: { include_usage: true } }
-            : { ...baseBody, thinking: { type: "disabled" as const } };
+            : { ...baseBody, ...this.noStreamExtras() };
 
         const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
             method: "POST",
@@ -126,7 +136,7 @@ export class LLMClient {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${this.config.apiKey}`,
             },
-            body: JSON.stringify({ ...baseBody, thinking: { type: "disabled" as const } }),
+            body: JSON.stringify({ ...baseBody, ...this.noStreamExtras() }),
             signal,
         });
 

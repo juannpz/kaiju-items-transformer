@@ -20,4 +20,8 @@ export interface ParserOptions {
     sheetIndex?: number;
     headerRow?: number;
     delimiter?: string;
+    /** URL de origen (Google Sheets). */
+    url?: string;
+    /** Extractor de texto/OCR para PDF provisto por el caller. */
+    extractText?: (bytes: Uint8Array) => Promise<string>;
 }

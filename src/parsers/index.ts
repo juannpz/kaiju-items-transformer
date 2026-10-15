@@ -2,8 +2,10 @@ import type { Parser } from "./types.ts";
 import type { DocumentFormat } from "../types.ts";
 import { CsvParser, ExcelParser } from "./ExcelParser.ts";
 import { PdfParser } from "./PdfParser.ts";
+import { GoogleSheetsParser } from "./googleSheets.ts";
 
 const parsers: Parser[] = [
+    new GoogleSheetsParser(),
     new ExcelParser(),
     new CsvParser(),
     new PdfParser(),
@@ -11,6 +13,7 @@ const parsers: Parser[] = [
 
 export { CsvParser, ExcelParser, ParseError } from "./ExcelParser.ts";
 export { PdfParseError, PdfParser } from "./PdfParser.ts";
+export { googleSheetCsvUrl, GoogleSheetsParser } from "./googleSheets.ts";
 export type { Parser, ParserOptions, RawContent, TabularData } from "./types.ts";
 
 export function detectFormat(data: Uint8Array, filename?: string): DocumentFormat {

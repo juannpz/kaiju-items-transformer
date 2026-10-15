@@ -3,6 +3,7 @@ export { defineSchema } from "./schema.ts";
 export { LLMError } from "./llm/LLMClient.ts";
 export { ParseError } from "./parsers/ExcelParser.ts";
 export { PdfParseError } from "./parsers/PdfParser.ts";
+export { googleSheetCsvUrl, GoogleSheetsParser } from "./parsers/googleSheets.ts";
 export { FormatDetectionError } from "./parsers/index.ts";
 export { ColumnMappingCache, PromptOptimizer, TrainingLogger } from "./training/index.ts";
 

@@ -1,23 +1,27 @@
-# @juannpz/kaiju-items-processor
+# @juannpz/kaiju-items-transformer-v2
 
-Document import and semantic extraction library for Deno. Parses Excel, CSV, and PDF documents and
-uses LLM-powered semantic understanding to extract structured data matching a target schema —
-regardless of how the source document names or organizes its columns.
+Document import and semantic extraction library for Deno. Parses Excel, CSV, **Google Sheets**, and
+**PDF** documents and uses LLM-powered semantic understanding to extract structured data matching a
+target schema — regardless of how the source document names or organizes its columns.
 
 ## Features
 
-- **Multi-format parsing**: Excel (.xlsx, .xls), CSV, TSV, and PDF text extraction
-- **Semantic column mapping**: DeepSeek v4 Pro interprets column meaning from headers AND values,
-  not just text matching
-- **Structured extraction**: Returns data in your exact target schema via strict tool calling
-- **Missing field tracking**: Reports which required fields couldn't be extracted and why
-- **Type coercion safety net**: Post-processes LLM output to ensure correct types
-- **Deno-first**: Published on JSR, zero Node.js-specific dependencies
+- **Multi-format parsing**: Excel (.xlsx, .xls), CSV, TSV, **Google Sheets** (link compartido) y
+  **PDF** (vía extractor de texto/OCR provisto por el caller).
+- **Header row**: respeta la fila de encabezado detectada por el LLM y acepta `headerRow` explícito
+  (soporta archivos con preámbulo).
+- **Multi-proveedor LLM**: cualquier endpoint **OpenAI-compatible** (`baseUrl`/`model`); DeepSeek por
+  defecto (ajustes específicos de DeepSeek se aplican solo a ese proveedor).
+- **Semantic column mapping**: el LLM interpreta el significado de las columnas a partir de headers Y
+  valores, no solo coincidencia de texto.
+- **Structured extraction**: devuelve los datos en tu esquema exacto vía tool calling estricto.
+- **Missing field tracking** + **type coercion**: reporta campos faltantes y normaliza tipos.
+- **Deno-first**: publicado en JSR, sin dependencias específicas de Node.
 
 ## Quick Start
 
 ```typescript
-import { defineSchema, DocumentProcessor } from "@juannpz/kaiju-items-processor";
+import { defineSchema, DocumentProcessor } from "@juannpz/kaiju-items-transformer-v2";
 
 // 1. Define your target schema
 const itemSchema = defineSchema({

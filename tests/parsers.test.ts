@@ -51,6 +51,22 @@ Deno.test("ExcelParser: respeta options.headerRow", () => {
     assertEq(data.rows.length, 1, "rows");
 });
 
+Deno.test("CsvParser: detecta header tras preámbulo y columnas vacías (export Google Sheets)", () => {
+    const csv = [
+        "LISTA DE PRECIOS - DISTRIBUIDORA DEL CENTRO S.A.,,,,,",
+        "Vigencia 2026-10-01 | PVP con IVA incluido,,,,,",
+        ",,,,,",
+        "CODIGO,EAN,DESCRIPCION,STOCK,PRECIO PVP,",
+        "BUL-HEX-516,7791234500017,BULON HEX 5/16,500,350.00,",
+        "ARAND-PLA-M8,7791234500031,ARANDELA M8,2000,95.00,",
+    ].join("\n");
+    const data = asTabular(new CsvParser().parse(new TextEncoder().encode(csv)));
+    assertEq(data.headers.join(","), "CODIGO,EAN,DESCRIPCION,STOCK,PRECIO PVP", "headers");
+    assertEq(data.rows.length, 2, "rows");
+    assertEq(data.rows[0]["DESCRIPCION"], "BULON HEX 5/16", "row0");
+    assertEq(data.rows[1]["STOCK"], "2000", "row1 stock");
+});
+
 Deno.test("CsvParser: delimitador y comillas", () => {
     const csv = 'COD;Producto;Precio\n1001;"Arandela 1/4; negra";10,5\n1002;Tornillo;20\n';
     const content = new CsvParser().parse(new TextEncoder().encode(csv));

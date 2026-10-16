@@ -181,28 +181,50 @@ export class CsvParser implements Parser {
         const text = new TextDecoder().decode(data);
         const delimiter = options?.delimiter ?? this.detectDelimiter(text);
 
-        const lines = text
-            .split(/\r?\n/)
-            .map((l) => l.trim())
-            .filter((l) => l.length > 0);
+        const empty: RawContent = {
+            type: "tabular",
+            data: { headers: [], rows: [], totalRows: 0, sheetName: "csv" },
+        };
 
-        if (lines.length === 0) {
-            return {
-                type: "tabular",
-                data: { headers: [], rows: [], totalRows: 0, sheetName: "csv" },
-            };
+        // Matriz cruda (respeta comillas), igual que el ExcelParser, para poder
+        // detectar la fila de encabezados cuando hay preámbulo (títulos, fechas).
+        const rawRows: unknown[][] = text
+            .split(/\r?\n/)
+            .map((line) => this.splitCSVLine(line, delimiter).map((c) => c.trim()));
+
+        if (rawRows.every((row) => row.every((c) => String(c ?? "").trim() === ""))) {
+            return empty;
         }
 
-        const headers = lines[0].split(delimiter).map((h) => h.trim().replace(/^"|"$/g, ""));
-        const dataRows: Record<string, unknown>[] = [];
+        const colCount = rawRows.reduce((max, row) => Math.max(max, row.length), 0);
+        const nonEmptyColIndices = findNonEmptyColumns(rawRows, colCount);
+        if (nonEmptyColIndices.length === 0) return empty;
 
-        for (let i = 1; i < lines.length; i++) {
-            const values = this.splitCSVLine(lines[i], delimiter);
-            if (values.every((v) => v === "")) continue;
+        const headerRow = options?.headerRow ?? detectHeaderRow(rawRows, nonEmptyColIndices);
+
+        const headers = nonEmptyColIndices.map((colIdx) => {
+            const h = rawRows[headerRow]?.[colIdx];
+            if (h != null && String(h).trim() !== "") return String(h).trim();
+            return `col_${colIdx}`;
+        });
+
+        const dataRows: Record<string, unknown>[] = [];
+        for (let i = headerRow + 1; i < rawRows.length; i++) {
+            const row = rawRows[i];
+            if (
+                !row ||
+                nonEmptyColIndices.every((c) => {
+                    const val = row[c];
+                    return val == null || String(val).trim() === "";
+                })
+            ) {
+                continue;
+            }
 
             const rowObj: Record<string, unknown> = {};
-            for (let j = 0; j < headers.length; j++) {
-                rowObj[headers[j]] = values[j]?.trim().replace(/^"|"$/g, "") ?? null;
+            for (let j = 0; j < nonEmptyColIndices.length; j++) {
+                const value = row[nonEmptyColIndices[j]];
+                rowObj[headers[j]] = value == null || String(value).trim() === "" ? null : value;
             }
             dataRows.push(rowObj);
         }
@@ -224,6 +246,7 @@ export class CsvParser implements Parser {
         return ",";
     }
 
+    /** Divide una línea CSV respetando comillas (y `""` como comilla escapada). */
     private splitCSVLine(line: string, delimiter: string): string[] {
         const result: string[] = [];
         let current = "";
@@ -231,9 +254,20 @@ export class CsvParser implements Parser {
 
         for (let i = 0; i < line.length; i++) {
             const char = line[i];
-            if (char === '"') {
-                inQuotes = !inQuotes;
-            } else if (char === delimiter && !inQuotes) {
+            if (inQuotes) {
+                if (char === '"') {
+                    if (line[i + 1] === '"') {
+                        current += '"';
+                        i++;
+                    } else {
+                        inQuotes = false;
+                    }
+                } else {
+                    current += char;
+                }
+            } else if (char === '"') {
+                inQuotes = true;
+            } else if (char === delimiter) {
                 result.push(current);
                 current = "";
             } else {

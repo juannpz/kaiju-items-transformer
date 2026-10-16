@@ -44,6 +44,46 @@ Deno.test("applyColumnMapping: mapea campos y precios por canal", () => {
     assert(prices[0]["channel_id"] === "pvp", "channel slug");
 });
 
+Deno.test("applyColumnMapping: multi-barcode (array_entry)", () => {
+    const barcodeSchema: TargetSchema = {
+        fields: [
+            { name: "name", type: "string", required: true },
+            { name: "barcode", type: "string", required: false },
+            {
+                name: "barcodes",
+                type: "array",
+                required: false,
+                items: { fields: [{ name: "barcode", type: "string", required: true }] },
+            },
+        ],
+    };
+    const barcodeMapping: ColumnMapping = {
+        header_row: 0,
+        columns: {
+            Nombre: { type: "field", field: "name" },
+            EAN: { type: "field", field: "barcode" },
+            "COD PROVEEDOR": {
+                type: "array_entry",
+                array_field: "barcodes",
+                value_field: "barcode",
+                meta: { barcode_type: "SUPPLIER" },
+            },
+        },
+    };
+    const data: TabularData = {
+        headers: ["Nombre", "EAN", "COD PROVEEDOR"],
+        rows: [{ Nombre: "Arandela", EAN: "7791234567890", "COD PROVEEDOR": "PROV-42" }],
+        totalRows: 1,
+    };
+    const result = applyColumnMapping(data, barcodeMapping, barcodeSchema);
+    const item = result.items[0];
+    assert(item["barcode"] === "7791234567890", "barcode principal");
+    const barcodes = item["barcodes"] as Array<Record<string, unknown>>;
+    assert(Array.isArray(barcodes) && barcodes.length === 1, "1 barcode extra");
+    assert(barcodes[0]["barcode"] === "PROV-42", "valor");
+    assert(barcodes[0]["barcode_type"] === "SUPPLIER", "meta");
+});
+
 Deno.test("applyColumnMapping: salta filas de banner", () => {
     const data: TabularData = {
         headers: ["Nombre", "Codigo", "Stock", "PVP"],

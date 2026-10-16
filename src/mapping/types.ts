@@ -2,6 +2,12 @@ export type ColumnTarget =
     | { type: "field"; field: string }
     | { type: "field_suffix"; field: string }
     | { type: "price_channel"; channel_name: string; channel_id?: string }
+    | {
+        type: "array_entry";
+        array_field: string;
+        value_field: string;
+        meta?: Record<string, unknown>;
+    }
     | { type: "ignore" };
 
 export interface ColumnMapping {
@@ -11,7 +17,18 @@ export interface ColumnMapping {
 
 export interface LLMColumnMappingResponse {
     column_mapping: Record<string, {
-        target: string | { channel_name: string; channel_id?: string } | null;
+        target:
+            | string
+            | {
+                channel_name: string;
+                channel_id?: string;
+            }
+            | {
+                array_field: string;
+                value_field: string;
+                meta?: Record<string, unknown>;
+            }
+            | null;
     }>;
     header_row: number;
     missing_fields: Array<{

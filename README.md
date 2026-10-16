@@ -10,10 +10,10 @@ target schema — regardless of how the source document names or organizes its c
   **PDF** (vía extractor de texto/OCR provisto por el caller).
 - **Header row**: respeta la fila de encabezado detectada por el LLM y acepta `headerRow` explícito
   (soporta archivos con preámbulo).
-- **Multi-proveedor LLM**: cualquier endpoint **OpenAI-compatible** (`baseUrl`/`model`); DeepSeek por
-  defecto (ajustes específicos de DeepSeek se aplican solo a ese proveedor).
-- **Semantic column mapping**: el LLM interpreta el significado de las columnas a partir de headers Y
-  valores, no solo coincidencia de texto.
+- **Multi-proveedor LLM**: cualquier endpoint **OpenAI-compatible** (`baseUrl`/`model`); DeepSeek
+  por defecto (ajustes específicos de DeepSeek se aplican solo a ese proveedor).
+- **Semantic column mapping**: el LLM interpreta el significado de las columnas a partir de headers
+  Y valores, no solo coincidencia de texto.
 - **Structured extraction**: devuelve los datos en tu esquema exacto vía tool calling estricto.
 - **Missing field tracking** + **type coercion**: reporta campos faltantes y normaliza tipos.
 - **Deno-first**: publicado en JSR, sin dependencias específicas de Node.

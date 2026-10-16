@@ -119,13 +119,13 @@ export function buildColumnMappingToolParameters(): Record<string, unknown> {
             column_mapping: {
                 type: "object",
                 description:
-                    "Mapeo de nombre de columna a su target. La key es el nombre exacto de la columna. El value es { target: field_name } para campos simples, { target: { channel_name, channel_id } } para canales de precio, o { target: null } para columnas ignoradas.",
+                    "Mapeo de nombre de columna a su target. La key es el nombre exacto de la columna. El value es { target: field_name } para campos simples, { target: { channel_name, channel_id } } para canales de precio, { target: { array_field, value_field, meta? } } para agregar la columna como un entry de un campo array (ej. barcodes), o { target: null } para columnas ignoradas.",
                 additionalProperties: {
                     type: "object",
                     properties: {
                         target: {
                             description:
-                                "Nombre del campo destino, objeto de canal de precio, o null",
+                                "Nombre del campo destino; objeto de canal de precio {channel_name, channel_id}; objeto de array {array_field, value_field, meta?}; o null",
                         },
                     },
                     required: ["target"],

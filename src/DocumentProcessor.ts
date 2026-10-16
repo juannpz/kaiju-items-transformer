@@ -458,6 +458,16 @@ export class DocumentProcessor {
                 continue;
             }
 
+            if (typeof colDef.target === "object" && "array_field" in colDef.target) {
+                columns[colName] = {
+                    type: "array_entry",
+                    array_field: colDef.target.array_field,
+                    value_field: colDef.target.value_field,
+                    meta: colDef.target.meta,
+                };
+                continue;
+            }
+
             columns[colName] = { type: "ignore" };
         }
 

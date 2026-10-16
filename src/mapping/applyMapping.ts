@@ -60,6 +60,16 @@ export function applyColumnMapping(
                     });
                 }
             }
+
+            if (target.type === "array_entry") {
+                const val = coerceToString(rawValue);
+                if (val) {
+                    const arr =
+                        (item[target.array_field] as Record<string, unknown>[] | undefined) ?? [];
+                    arr.push({ [target.value_field]: val, ...(target.meta ?? {}) });
+                    item[target.array_field] = arr;
+                }
+            }
         }
 
         for (const [field, suffixValues] of Object.entries(suffixes)) {

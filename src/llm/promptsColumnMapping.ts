@@ -92,6 +92,15 @@ REGLAS DE MAPEO:
    probablemente sea "cantidad por pack" o "unidades por caja", NO stock real.
    Marcá esas columnas como ignoradas y reportalo en warnings.
 
+7-bis. CÓDIGOS MÚLTIPLES (campo array \`barcodes\`):
+   Si el esquema tiene un campo array \`barcodes\` y la planilla trae MÁS de una columna de código
+   (ej: "Codigo EAN" + "COD PROVEEDOR"), mapeá la PRINCIPAL (EAN/SKU interno) a \`barcode\` y las demás
+   al array con:
+     { "target": { "array_field": "barcodes", "value_field": "barcode", "meta": { "barcode_type": "SUPPLIER" } } }
+   \`barcode_type\` es opcional (EAN13 | EAN8 | UPC | CODE128 | SUPPLIER | INTERNAL | SKU) y sirve para
+   el consumidor; si dudás, omitilo.
+   Si hay una sola columna de código, mapeala a \`barcode\` y NO uses el array.
+
 8. \`item_type_id\` es obligatorio en el esquema pero NUNCA aparece en planillas de proveedor.
    Es esperable que figure en missing_fields. No intentes inferirlo de otras columnas.
 

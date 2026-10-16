@@ -1,21 +1,47 @@
+/**
+ * Convierte a número tolerando formatos es-AR (`1.234,56`) y en-US (`1,234.56`),
+ * símbolos de moneda y espacios. Heurística de separadores:
+ * - con ambos separadores, el más a la derecha es el decimal;
+ * - con un solo separador, si agrupa de a 3 (`2,000` / `1.234`) es miles; si no, decimal.
+ */
 export function coerceToNumber(value: unknown): number | null {
     if (value === null || value === undefined) return null;
     if (typeof value === "number") return value;
+    if (typeof value !== "string") return null;
 
-    if (typeof value === "string") {
-        const cleaned = value
-            .replace(/^[$€£¥]\s*/, "")
-            .replace(/\s*[$€£¥]$/, "")
-            .replace(/\./g, "")
-            .replace(",", ".")
-            .replace(/\s/g, "")
-            .trim();
+    let s = value
+        .replace(/^[$€£¥]\s*/, "")
+        .replace(/\s*[$€£¥]$/, "")
+        .replace(/\s/g, "")
+        .trim();
+    if (s === "") return null;
 
-        const parsed = Number(cleaned);
-        if (!isNaN(parsed)) return parsed;
+    let sign = "";
+    if (s[0] === "+" || s[0] === "-") {
+        sign = s[0];
+        s = s.slice(1);
     }
 
-    return null;
+    const lastDot = s.lastIndexOf(".");
+    const lastComma = s.lastIndexOf(",");
+
+    if (lastDot >= 0 && lastComma >= 0) {
+        if (lastComma > lastDot) {
+            // Decimal con coma (es-AR): los puntos son miles.
+            s = s.replace(/\./g, "").replace(",", ".");
+        } else {
+            // Decimal con punto (en-US): las comas son miles.
+            s = s.replace(/,/g, "");
+        }
+    } else if (lastComma >= 0) {
+        s = /^\d{1,3}(,\d{3})+$/.test(s) ? s.replace(/,/g, "") : s.replace(",", ".");
+    } else if (lastDot >= 0) {
+        if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
+        // si no agrupa de a 3, el punto ya es decimal.
+    }
+
+    const parsed = Number(sign + s);
+    return isNaN(parsed) ? null : parsed;
 }
 
 export function coerceToString(value: unknown): string | null {

@@ -10,6 +10,7 @@ import type {
 import type { RawContent, TabularData } from "./parsers/types.ts";
 import { detectFormat, getParser } from "./parsers/index.ts";
 import { buildColumnMappingSystemPrompt, buildSystemPrompt } from "./llm/prompts.ts";
+import { MAPPING_PROMPT_VERSION } from "./llm/promptsColumnMapping.ts";
 import { buildColumnMappingToolParameters, buildToolParameters } from "./schema.ts";
 import { LLMClient, LLMError } from "./llm/LLMClient.ts";
 import { formatForLLM } from "./utils/contentFormatter.ts";
@@ -20,6 +21,15 @@ import { ColumnMappingCache, PromptOptimizer, TrainingLogger } from "./training/
 import type { TrainingLogEntry } from "./training/TrainingLogger.ts";
 
 const DEFAULT_LLM_TIMEOUT_MS = 300_000;
+
+/** Hash djb2 (base36) para usar en nombres de archivo de cache. */
+function hashString(input: string): string {
+    let hash = 5381;
+    for (let i = 0; i < input.length; i++) {
+        hash = ((hash << 5) + hash + input.charCodeAt(i)) | 0;
+    }
+    return (hash >>> 0).toString(36);
+}
 
 export class DocumentProcessor {
     private schema: ProcessorConfig["schema"];
@@ -34,6 +44,18 @@ export class DocumentProcessor {
         this.locale = config.locale ?? "es";
         this.timeoutMs = DEFAULT_LLM_TIMEOUT_MS;
         this.ocr = config.ocr;
+    }
+
+    /** Hash estable de (prompt + locale + forma del esquema) para el cache de mapeo. */
+    private cacheSignature(): string {
+        const parts: string[] = [MAPPING_PROMPT_VERSION, this.locale];
+        for (const f of this.schema.fields) {
+            parts.push(`${f.name}:${f.type}:${f.required ? "R" : "o"}`);
+            if (f.items?.fields?.length) {
+                parts.push(f.items.fields.map((s) => `${s.name}:${s.type}`).join(","));
+            }
+        }
+        return hashString(parts.join("|"));
     }
 
     async process<T extends Record<string, unknown> = Record<string, unknown>>(
@@ -208,6 +230,10 @@ export class DocumentProcessor {
         let fromCache = false;
 
         if (cache) {
+            // Firma de cache: prompt + locale + esquema. Invalida mapeos viejos
+            // cuando cambia el prompt o el esquema (evita reusar resultados de
+            // versiones anteriores).
+            cache.setSignature(this.cacheSignature());
             llmResult = await cache.get(data.headers, data.headers.slice(0, 5));
             if (llmResult) {
                 tokensUsed = 0;

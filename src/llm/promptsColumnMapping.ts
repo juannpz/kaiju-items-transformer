@@ -1,6 +1,13 @@
 import type { TargetSchema } from "../types.ts";
 import { getAllFieldNames, getRequiredFields } from "../schema.ts";
 
+/**
+ * Versión del prompt de mapeo. **Subila** cada vez que cambie el contenido de
+ * las reglas de mapeo: invalida el `ColumnMappingCache` (que se keyea con esta
+ * versión), evitando reusar mapeos generados por un prompt anterior.
+ */
+export const MAPPING_PROMPT_VERSION = "2026-10-16.1";
+
 export function buildColumnMappingSystemPrompt(
     schema: TargetSchema,
     locale?: string,

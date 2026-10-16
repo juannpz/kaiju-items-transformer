@@ -12,6 +12,7 @@ interface CacheEntry {
 export class ColumnMappingCache {
     private basePath: string;
     private maxAgeDays: number;
+    private signature = "";
     private static instance: ColumnMappingCache | null = null;
 
     private constructor(basePath: string, maxAgeDays: number) {
@@ -31,6 +32,14 @@ export class ColumnMappingCache {
         return this.instance;
     }
 
+    /**
+     * Firma del mapeo (versión de prompt + locale + forma del esquema). Cambia
+     * cuando cambia el prompt o el esquema, invalidando entradas viejas.
+     */
+    setSignature(signature: string): void {
+        this.signature = signature;
+    }
+
     getCacheKey(headers: string[], sampleValues: string[]): string {
         const normalized = [...headers]
             .map((h) => h.toLowerCase().trim())
@@ -38,7 +47,8 @@ export class ColumnMappingCache {
             .join(",");
 
         const sample = sampleValues.slice(0, 3).join("|").slice(0, 120);
-        return `${normalized}::${sample}`;
+        const prefix = this.signature ? `${this.signature}::` : "";
+        return `${prefix}${normalized}::${sample}`;
     }
 
     async get(headers: string[], sampleValues: string[]): Promise<LLMColumnMappingResponse | null> {

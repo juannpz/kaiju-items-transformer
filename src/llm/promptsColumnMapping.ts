@@ -24,6 +24,56 @@ function buildFieldDescriptions(schema: TargetSchema): string {
         .join("\n");
 }
 
+/**
+ * Guía genérica de mapeo para campos array del esquema (distintos de `barcodes`,
+ * que tiene su propia regla 7-bis). Deriva `value_field` y `meta` del subesquema.
+ */
+function buildArrayFieldsGuidance(schema: TargetSchema, lang: "es" | "en"): string {
+    // En español `barcodes` ya tiene su regla específica (7-bis); en inglés no.
+    const arrays = schema.fields.filter((f) =>
+        f.type === "array" && (lang === "en" || f.name !== "barcodes") &&
+        (f.items?.fields?.length ?? 0) > 0
+    );
+    if (arrays.length === 0) return "";
+
+    const blocks = arrays.map((f) => {
+        const subs = f.items!.fields!;
+        const valueField = subs.find((s) => s.name === "value")?.name ?? subs[0].name;
+        const fixed = subs.filter((s) => s.name !== valueField).map((s) => s.name);
+        const meta = fixed.length > 0
+            ? `, "meta": { ${fixed.map((n) => `"${n}": "<valor fijo>"`).join(", ")} }`
+            : "";
+        return `   - \`${f.name}\` (subcampos: ${
+            subs.map((s) => s.name).join(", ")
+        }) → value_field=\`${valueField}\`${meta}`;
+    }).join("\n");
+
+    const attrs = arrays.find((f) => f.name === "attributes");
+    const attrExample = attrs
+        ? (lang === "es"
+            ? `   Ejemplo (attributes): columna "MATERIAL" con valor "acero" →
+     { "target": { "array_field": "attributes", "value_field": "value", "meta": { "attribute": "material" } } }
+   Usá SIEMPRE el shape de array para las columnas de atributos (no las mapees como campo simple).
+   En \`attributes\`, \`meta.attribute\` es el CÓDIGO en minúsculas (material, medida, rosca, color, diametro, espesor, largo, ancho, alto, peso, potencia, voltaje, norma, modelo, presentacion).`
+            : `   Example (attributes): column "MATERIAL" value "steel" →
+     { "target": { "array_field": "attributes", "value_field": "value", "meta": { "attribute": "material" } } }
+   Always use the array shape for attribute columns (do not map them as a plain field).`)
+        : "";
+
+    const header = lang === "es"
+        ? "7-ter. CAMPOS ARRAY (además de barcodes):"
+        : "7-ter. ARRAY FIELDS (besides barcodes):";
+    const intro = lang === "es"
+        ? `   Cada columna fuente puede agregarse como un entry de un campo array con:
+     { "target": { "array_field": "<campo>", "value_field": "<subcampo que recibe el valor de la celda>", "meta": { <subcampos fijos> } } }
+   Campos array del esquema:`
+        : `   Each source column can be added as an entry of an array field with:
+     { "target": { "array_field": "<field>", "value_field": "<subfield that receives the cell value>", "meta": { <fixed subfields> } } }
+   Array fields in the schema:`;
+
+    return `\n${header}\n${intro}\n${blocks}\n${attrExample}\n`;
+}
+
 function buildSpanishColumnPrompt(schema: TargetSchema): string {
     const fieldDescriptions = buildFieldDescriptions(schema);
     const requiredFields = getRequiredFields(schema);
@@ -100,7 +150,7 @@ REGLAS DE MAPEO:
    \`barcode_type\` es opcional (EAN13 | EAN8 | UPC | CODE128 | SUPPLIER | INTERNAL | SKU) y sirve para
    el consumidor; si dudás, omitilo.
    Si hay una sola columna de código, mapeala a \`barcode\` y NO uses el array.
-
+${buildArrayFieldsGuidance(schema, "es")}
 8. \`item_type_id\` es obligatorio en el esquema pero NUNCA aparece en planillas de proveedor.
    Es esperable que figure en missing_fields. No intentes inferirlo de otras columnas.
 
@@ -166,7 +216,7 @@ MAPPING RULES:
 6. IVA normalization: "21", "0.21", "21%" → "21%"
 
 7. STOCK: if multiple quantity columns, choose the one representing TOTAL stock (higher values).
-
+${buildArrayFieldsGuidance(schema, "en")}
 8. \`item_type_id\` is required but NEVER present in supplier lists. Expected in missing_fields.
 
 9. Report \`header_row\` (0-indexed) where actual column headers start. Skip title/metadata rows above it.
